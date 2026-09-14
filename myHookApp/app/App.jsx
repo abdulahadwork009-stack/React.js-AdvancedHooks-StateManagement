@@ -1,88 +1,65 @@
-import { useState, useMemo, useCallback } from 'react';
-import { ThemeProvider, useTheme } from './context/ThemeContext';
-import { CartProvider, useCart } from './context/CartContext';
-import { useFetch } from './hooks/useFetch';
-import Header from './components/Header';
-import SearchBar from './components/SearchBar';
-import CategoryFilter from './components/CategoryFilter';
-import ProductList from './components/ProductList';
-import Cart from './components/Cart';
+import { useState, useMemo, useCallback } from "react";
+import { ThemeProvider } from "./context/ThemeContext";
+import { CartProvider, useCart } from "./context/CartContext";
+import { useFetch } from "./hooks/useFetch";
+import Header from "./components/Header";
+import SearchBar from "./components/SearchBar";
+import CategoryFilter from "./components/CategoryFilter";
+import ProductList from "./components/ProductList";
+import Cart from "./components/Cart";
 
-const API_URL = 'https://dummyjson.com/products?limit=100';
+const API_URL = "https://dummyjson.com/products?limit=100";
 
 function AppContent() {
   const { data, loading, error } = useFetch(API_URL);
   const { addToCart } = useCart();
-  useTheme(); // keeps the html.dark class in sync via ThemeProvider's effect
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [unrelatedCounter, setUnrelatedCounter] = useState(0);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("all");
 
-  const products = data?.products ?? [];
+  const products = data?.products || [];
 
   const categories = useMemo(() => {
-    const unique = new Set(products.map((product) => product.category));
-    return Array.from(unique).sort();
+    return [...new Set(products.map((p) => p.category))];
   }, [products]);
 
   const filteredProducts = useMemo(() => {
-    return products
-      .filter((product) => {
-        const matchesSearch = product.title
-          .toLowerCase()
-          .includes(searchTerm.trim().toLowerCase());
-        const matchesCategory =
-          selectedCategory === 'all' || product.category === selectedCategory;
-        return matchesSearch && matchesCategory;
-      })
-      .sort((a, b) => a.title.localeCompare(b.title));
-  }, [products, searchTerm, selectedCategory]);
+    return products.filter((p) => {
+      const matchName = p.title.toLowerCase().includes(search.toLowerCase());
+      const matchCategory = category === "all" || p.category === category;
+      return matchName && matchCategory;
+    });
+  }, [products, search, category]);
 
   const handleAddToCart = useCallback(
-    (product) => {
-      addToCart(product);
-    },
+    (product) => addToCart(product),
     [addToCart]
   );
 
   return (
-    <div className="min-h-screen bg-paper font-sans text-ink transition-colors duration-200 dark:bg-paper-dark dark:text-ink-dark">
+    <div className="min-h-screen bg-white dark:bg-gray-900 dark:text-white">
       <Header />
 
-      <main className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-6 py-7 pb-12 md:grid-cols-[1fr_340px] md:items-start">
-        <section className="flex min-w-0 flex-col gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <h2 className="m-0 font-display text-2xl font-medium">Products</h2>
-            <button
-              type="button"
-              className="rounded border border-dashed border-edge px-3 py-1.5 text-sm text-muted tabular-nums hover:border-muted hover:text-ink dark:border-edge-dark dark:text-muted-dark dark:hover:border-muted-dark dark:hover:text-ink-dark"
-              onClick={() => setUnrelatedCounter((count) => count + 1)}
-            >
-              Unrelated counter: {unrelatedCounter}
-            </button>
-          </div>
+      <main className="max-w-5xl mx-auto p-4 flex flex-col md:flex-row gap-6">
+        <div className="flex-1">
+          <h2 className="text-xl font-bold mb-3">Products</h2>
 
-          <div className="flex flex-wrap gap-3">
-            <SearchBar value={searchTerm} onChange={setSearchTerm} />
+          <div className="flex gap-2 mb-4">
+            <SearchBar value={search} onChange={setSearch} />
             <CategoryFilter
               categories={categories}
-              selected={selectedCategory}
-              onChange={setSelectedCategory}
+              selected={category}
+              onChange={setCategory}
             />
           </div>
 
-          {loading && <p className="py-2 text-muted dark:text-muted-dark">Loading products…</p>}
-          {error && (
-            <p className="py-2 text-danger dark:text-danger-dark">
-              Couldn't load products: {error}
-            </p>
-          )}
+          {loading && <p>Loading...</p>}
+          {error && <p className="text-red-600">Error: {error}</p>}
 
           {!loading && !error && (
             <ProductList products={filteredProducts} onAddToCart={handleAddToCart} />
           )}
-        </section>
+        </div>
 
         <Cart />
       </main>
